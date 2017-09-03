@@ -1,53 +1,124 @@
-function and(a, b) {return a && b}
+const { equals, and, path, not, length, reduce, splitEvery } = require('ramda')
+const a = console.assert
 
-var not = (x) => !x
+// Util functions
 
-function isArray(arr) { return Array.isArray(arr) }
+function isObject(o) { return and(not(Array.isArray(o)),
+                                  (o instanceof Object)) }
+a(isObject({key: "val"}), "Object is object")
+a(not(isObject([])), "Array is not object")
 
-function isAtom(a) { return not(isArray(a)) }
+function isString(s) { return (typeof s === 'string') }
+a(isString("hello!"), "A string is a string")
+a(not(isString(123)), "Number is not string")
+a(not(isString({wow: "cool"})), "Object is not string")
 
-function cons(a, b) { return [a, b] }
+const isTrue = equals({ name: 't' })
+a(isTrue({ name: 't' }), "(quote t) is t")
+a(not(isTrue({ name: 'a' })), "(quote a) is not t")
 
-// I must be sure a consCell never contains more than 2 items - it's dumber than JS
-function car(consCell) { return cons(consCell[0], consCell[1])[0] }
-var first = car
-function cdr(consCell) { return cons(consCell[0], consCell[1])[1] }
-var second = cdr
+// Interpreter implementation
 
-function isEqual(a, b) { return a === b }
+// Atom: {name: 'a'}
+// Cell: [Atom, Atom]
 
-// (cond ((true 1))) ;; => 1
-function cond(condBody) {
-  var firstClause = first(first(condBody))
-  if (firstClause) {
-    return second(first(condBody))
-  }
-  var secondClause = first(second(condBody))
-  if (secondClause) {
-    return second(second(condBody))
-  }
-}
+function quote(x) { return x }
 
-console.assert(cons(1, 2))
+a(equals(quote({ name: 'a' }), { name: 'a' }))
 
-console.assert(car(cons(1, 3)))
+// Should be called atom? or isAtom, but I forgive McCarthy
+function atom(x) {
+  return (and(
+    isObject(x),
+    isString(path(['name'], x))
+  )) ? { name: 't' } : { name: 'f' }}
 
-console.assert(cdr(cdr(cons(1, cons(1, 3)))))
+a(equals(
+  { name: 't' },
+  atom({ name: "atom" })))
 
-console.assert(isEqual((car(cons(1, 3))),
-                       (car(cons(1, 3)))))
+a(equals(
+  { name: 'f' },
+  atom([{ name: 't' }, { name: 't' }])))
 
-console.assert(
-  isEqual("ja!",
-          cond(cons(cons(true, "ja!")))))
+function eq(a, b) { return equals(a, b) }
 
-/*
- * (cond
- *   ((nil 0)
- *    (t 1))) ;;=> 1
- * */
-console.assert(
-  isEqual(
-    cond(cons(cons(false, 0),
-              cons(true, 1))),
-    1))
+function car(consCell) {
+  a(length(consCell) === 2)
+  a(and(atom(consCell[0]),
+        atom(consCell[1]))) // this is a bug, has to be list or atom (+ (+ 1 1) 1)
+  return consCell[0]}
+
+function cdr(consCell) {
+  a(length(consCell) === 2)
+  a(and(atom(consCell[0]),
+        atom(consCell[1]))) // this has the same bug
+  return consCell[1]}
+
+function cons(a, b) {
+  return [a, b]}
+
+a(eq(car(cons({ name: 'a'}, { name: 'b'})),
+     cdr(cons({ name: 'b'}, { name: 'a'}))))
+
+/* (cond
+ *   ((eq (quote a) (quote b)) (quote first))
+ *   ((atom (quote a)) (quote second)))
+ * => { name: 'second' }
+ */
+
+/* (if (quote t)
+ *   (quote a)
+ *   (quote b))
+ * => { name: 'a' }
+ */
+
+function lispIF (condition, then, otherwise) {
+  return isTrue(condition) ? then : otherwise}
+
+a(equals(lispIF(
+  { name: 'quote' },
+  { name: 'not-gonna-happen' },
+  { name: 'very-likely' })),
+            { name: 'very-likely' })
+a(equals({ name: 'very-likely' },
+         lispIF(
+           { name: 't' },
+           { name: 'very-likely' },
+           { name: 'not-gonna-happen' })),
+  "if with non-true value is false")
+
+function read (stringInterchangeFormat) {
+  if(equals("0;", stringInterchangeFormat.slice(0, 2))) {
+    return JSON.parse(stringInterchangeFormat.slice(2))
+  } else {
+    return [{ name: 'Version Error' }]
+  }}
+
+a(
+  equals(
+    read('0;{"name":"t"}'),
+    { name: 't' }))
+
+function toString(program) {
+  return "0;" + JSON.stringify(program)}
+
+const keccak = require('keccakjs')
+const btoa = require('btoa')
+// String -> Base64ofSha3
+function toHash(string) {
+  // Generate 512-bit digest.
+  var hash = new keccak() // uses 512 bits by default
+  hash.update(string)
+  return btoa(hash.digest())}
+
+a(equals(
+  toHash("baum"),
+  '25cU/Ixg/HMmH7/+63jmfdQVHkofcv74M10MmHyYFD+0iBjpI7BmXRppYRosT8FmwytSic231UurQXTA93CU6g=='))
+
+a(equals(
+  toHash(toString({ name: 't' })),
+  '2Vi0UPBOGvJ8oofANSwx0jh5l8J/yLyDTeMBonsvpU3+oxUPuY0FNklF2JvVQ9HWlTsTkuho7nUCvQrxkbD78w=='))
+
+//a(equals(read(), [{ name: 'quote' }, { name: 'a' }]),
+//   'The text interchange format of Baum 1 is the AST as an S-Expression')

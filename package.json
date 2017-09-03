@@ -6,9 +6,11 @@
     "author": "Martin Josefsson <hello@martinjosefsson.com>",
     "license": "GPLv3",
     "scripts": {
-        "start": "./src/index.js"
+        "start": "node ./src/index.js"
     },
     "dependencies": {
+        "btoa": "^1.1.2",
+        "keccakjs": "^0.2.1",
         "ramda": "^0.24.1"
     }
 }
