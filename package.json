@@ -4,13 +4,20 @@
     "description": "木",
     "main": "src/baum.js",
     "author": "Martin Josefsson <hello@martinjosefsson.com>",
-    "license": "GPLv3",
+    "license": "GPL-3.0",
     "scripts": {
-        "start": "node ./src/index.js"
+        "build": "yarn run flow && babel -s -o target/baum.out.js src/baum.js",
+        "prepublish": "yarn run build",
+        "start": "yarn run build && node target/baum.out.js"
     },
     "dependencies": {
         "btoa": "^1.1.2",
         "keccakjs": "^0.2.1",
         "ramda": "^0.24.1"
+    },
+    "devDependencies": {
+        "babel-cli": "^6.26.0",
+        "babel-preset-flow": "^6.23.0",
+        "flow-bin": "^0.54.1"
     }
 }

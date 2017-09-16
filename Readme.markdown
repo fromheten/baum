@@ -1,4 +1,5 @@
 # Baum - experimental version
+## Lambda - the ultimate declarative. Hash - the ultimate identifier. Baum - the ultimate, inter-galactical programming environment.
 
 Baum is a programming environment.
 
